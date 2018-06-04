@@ -69,6 +69,8 @@ type
     public procedure Save(bw:System.IO.BinaryWriter);
     begin
       
+      bw.Write(word($0001));//version
+      
       for var i1 := 0 to l2C-1 do
         for var i2 := 0 to inputsC-1 do
           bw.Write(input_to_l2[i1][i2]);
@@ -126,6 +128,8 @@ type
     
     public constructor(br:System.IO.BinaryReader);
     begin
+      
+      if br.ReadUInt16<>$0001 then raise new System.Exception('в данной версии BotData не поддреживаются нейронные сети с версией не равной $0001');//version
       
       SetLength(input_to_l2,l2C);
       for var i1 := 0 to l2C-1 do
