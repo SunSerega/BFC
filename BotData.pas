@@ -2,240 +2,17 @@
 
 interface
 
-uses BoardData;
+uses BoardData, NNData;
+uses SNNData, NEAT_NNData;
 
 type
-  NN = sealed class
-    
-    private class function Sigmoid(x: real) := 1 / (1 + Exp(-x));
-    
-    public const inputsC =
-      64*2+//eash cell * (color + value)
-      0;
-    
-    public const l2C = inputsC;
-    public const l3C = inputsC div 2;
-    
-    private const TotalConnections =
-      inputsC*l2C+
-      l2C*l3C+
-      l3C*1;
-    
-    private const TotalConsts =
-      l2C+
-      l3C;
-    
-    private const TotalValues = TotalConnections+TotalConsts;
-    
-    
-    public input_to_l2:array of array of real;
-    public l2Consts:array of real;
-    
-    public l2_to_l3:array of array of real;
-    public l3Consts:array of real;
-    
-    public l3_to_output:array of real;
-    
-    
-    public function Calc(input:Board):real;
-    begin
-      
-      var cl := new real[inputsC];
-      for var x := 0 to 7 do
-      for var y := 0 to 7 do
-      begin
-        var pt:integer;
-        cl[(x+y*8)*2+0] := (System.Math.DivRem(input.cls[x,y],6,pt) = integer(input.white_move))?-1:1;
-        cl[(x+y*8)*2+1] := pt;
-      end;
-      var nl := Copy(l2Consts);
-      
-      for var i1 := 0 to l2C-1 do
-        for var i2 := 0 to inputsC-1 do
-          nl[i1] += input_to_l2[i1][i2]*cl[i2];
-      
-      cl := nl;
-      nl := Copy(l3Consts);
-      
-      for var i1 := 0 to l3C-1 do
-        for var i2 := 0 to l2C-1 do
-          nl[i1] += l2_to_l3[i1][i2]*cl[i2];
-      
-      for var i2 := 0 to l3C-1 do
-        Result += l3_to_output[i2]*nl[i2];
-      
-    end;
-    
-    public procedure Save(bw:System.IO.BinaryWriter);
-    begin
-      
-      bw.Write(word($0001));//version
-      
-      for var i1 := 0 to l2C-1 do
-        for var i2 := 0 to inputsC-1 do
-          bw.Write(input_to_l2[i1][i2]);
-      
-      for var i1 := 0 to l3C-1 do
-        for var i2 := 0 to l2C-1 do
-          bw.Write(l2_to_l3[i1][i2]);
-      
-      for var i2 := 0 to l3C-1 do
-        bw.Write(l3_to_output[i2]);
-      
-      
-      for var i1 := 0 to l2C-1 do
-        bw.Write(l2Consts[i1]);
-      
-      for var i1 := 0 to l3C-1 do
-        bw.Write(l3Consts[i1]);
-      
-    end;
-    
-    
-    public constructor;
-    begin
-      
-      SetLength(input_to_l2,l2C);
-      for var i1 := 0 to l2C-1 do
-      begin
-        input_to_l2[i1] := new real[inputsC];
-        for var i2 := 0 to inputsC-1 do
-          input_to_l2[i1][i2] := Random*2-1;
-      end;
-      
-      SetLength(l2_to_l3,l3C);
-      for var i1 := 0 to l3C-1 do
-      begin
-        l2_to_l3[i1] := new real[l2C];
-        for var i2 := 0 to l2C-1 do
-          l2_to_l3[i1][i2] := Random*2-1;
-      end;
-      
-      l3_to_output := new real[l3C];
-      for var i2 := 0 to l3C-1 do
-        l3_to_output[i2] := Random*2-1;
-      
-      
-      l2Consts := new real[l2C];
-      for var i1 := 0 to l2C-1 do
-        l2Consts[i1] := Random*2-1;
-      
-      l3Consts := new real[l2C];
-      for var i1 := 0 to l3C-1 do
-        l3Consts[i1] := Random*2-1;
-      
-    end;
-    
-    public constructor(br:System.IO.BinaryReader);
-    begin
-      
-      if br.ReadUInt16<>$0001 then raise new System.Exception('в данной версии BotData не поддреживаются нейронные сети с версией не равной $0001');//version
-      
-      SetLength(input_to_l2,l2C);
-      for var i1 := 0 to l2C-1 do
-      begin
-        input_to_l2[i1] := new real[inputsC];
-        for var i2 := 0 to inputsC-1 do
-          input_to_l2[i1][i2] := br.ReadDouble;
-      end;
-      
-      SetLength(l2_to_l3,l3C);
-      for var i1 := 0 to l3C-1 do
-      begin
-        l2_to_l3[i1] := new real[l2C];
-        for var i2 := 0 to l2C-1 do
-          l2_to_l3[i1][i2] := br.ReadDouble;
-      end;
-      
-      l3_to_output := new real[l3C];
-      for var i2 := 0 to l3C-1 do
-        l3_to_output[i2] := br.ReadDouble;
-      
-      
-      l2Consts := new real[l2C];
-      for var i1 := 0 to l2C-1 do
-        l2Consts[i1] := br.ReadDouble;
-      
-      l3Consts := new real[l2C];
-      for var i1 := 0 to l3C-1 do
-        l3Consts[i1] := br.ReadDouble;
-      
-    end;
-    
-    public constructor(n1:NN);
-    begin
-      
-      SetLength(input_to_l2,l2C);
-      for var i1 := 0 to l2C-1 do
-      begin
-        input_to_l2[i1] := new real[inputsC];
-        for var i2 := 0 to inputsC-1 do
-          input_to_l2[i1][i2] := n1.input_to_l2[i1][i2] + Random*0.2-0.1;
-      end;
-      
-      SetLength(l2_to_l3,l3C);
-      for var i1 := 0 to l3C-1 do
-      begin
-        l2_to_l3[i1] := new real[l2C];
-        for var i2 := 0 to l2C-1 do
-          l2_to_l3[i1][i2] := n1.l2_to_l3[i1][i2] + Random*0.2-0.1;
-      end;
-      
-      l3_to_output := new real[l3C];
-      for var i2 := 0 to l3C-1 do
-        l3_to_output[i2] := n1.l3_to_output[i2] + Random*0.2-0.1;
-      
-      
-      l2Consts := new real[l2C];
-      for var i1 := 0 to l2C-1 do
-        l2Consts[i1] := n1.l2Consts[i1] + Random*0.2-0.1;
-      
-      l3Consts := new real[l2C];
-      for var i1 := 0 to l3C-1 do
-        l3Consts[i1] := n1.l3Consts[i1] + Random*0.2-0.1;
-      
-    end;
-    
-    public constructor(n1,n2:NN);
-    begin
-      
-      SetLength(input_to_l2,l2C);
-      for var i1 := 0 to l2C-1 do
-      begin
-        input_to_l2[i1] := new real[inputsC];
-        for var i2 := 0 to inputsC-1 do
-          input_to_l2[i1][i2] := (n1.input_to_l2[i1][i2]+n2.input_to_l2[i1][i2])/2 + Random*0.2-0.1;
-      end;
-      
-      SetLength(l2_to_l3,l3C);
-      for var i1 := 0 to l3C-1 do
-      begin
-        l2_to_l3[i1] := new real[l2C];
-        for var i2 := 0 to l2C-1 do
-          l2_to_l3[i1][i2] := (n1.l2_to_l3[i1][i2]+n2.l2_to_l3[i1][i2])/2 + Random*0.2-0.1;
-      end;
-      
-      l3_to_output := new real[l3C];
-      for var i2 := 0 to l3C-1 do
-        l3_to_output[i2] := (n1.l3_to_output[i2]+n2.l3_to_output[i2])/2 + Random*0.2-0.1;
-      
-      
-      l2Consts := new real[l2C];
-      for var i1 := 0 to l2C-1 do
-        l2Consts[i1] := (n1.l2Consts[i1]+n2.l2Consts[i1])/2 + Random*0.2-0.1;
-      
-      l3Consts := new real[l2C];
-      for var i1 := 0 to l3C-1 do
-        l3Consts[i1] := (n1.l3Consts[i1]+n2.l3Consts[i1])/2 + Random*0.2-0.1;
-      
-    end;
-    
-  end;
   Bot = sealed class
     
     private const max_bots = 20*(1+1+3);//=100; 20 first possible moves * (best bot + mutated best bot + 3*child of 2 random bots)
-    private const max_move_search_lvl = 3;
+    //private const max_move_search_lvl = 3;
+    
     //private const max_bots = 1;
+    private const max_move_search_lvl = 2;
     
     public class bots := new List<Bot>(20*(1+1+3));
     
@@ -251,30 +28,34 @@ type
     public last_score:integer;
     public fmhc:integer;
     
-    private constructor;
+    public constructor(t:word);
     begin
       bots.Add(self);
-      brain := new NN;
+      case t of
+        1: brain := new SNN;
+        2: brain := new NEAT_NN;
+        else raise new UnsupportedNNVesionException(t);
+      end;
     end;
     
-    private constructor(fname:string);
+    public constructor(fname:string);
     begin
       bots.Add(self);
       var br := new System.IO.BinaryReader(System.IO.File.OpenRead(fname));
-      brain := new NN(br);
-      br.Close;
+      brain := NN.Load(br.ReadUInt16,br);
+      br.BaseStream.Close;
     end;
     
-    private constructor(b1:Bot);
+    public constructor(b1:Bot);
     begin
       bots.Add(self);
-      brain := new NN(b1.brain);
+      brain := b1.brain.Mutate;
     end;
     
-    private constructor(b1,b2:Bot);
+    public constructor(b1,b2:Bot);
     begin
       bots.Add(self);
-      brain := new NN(b1.brain,b2.brain);
+      brain := b1.brain.Mutate(b2.brain);
     end;
     
     
@@ -295,7 +76,7 @@ type
         on BoardData.DrawGE do begin Result := real.NaN; exit end;
       end;
       if lvl = max_move_search_lvl then
-        Result := brain.Calc(b) else
+        Result := brain.Calc(b,white) else
       if lvl mod 2 = 1 then
       begin
         
@@ -480,10 +261,10 @@ type
       
     end;
     
-    public class procedure Init;
+    public class procedure Init(nn_t:word);
     begin
       
-      loop max_bots do new Bot;
+      loop max_bots do new Bot(nn_t);
       
     end;
     

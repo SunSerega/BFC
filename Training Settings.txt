@@ -1,1 +1,1 @@
-3 processor cores used
+2 processor cores used

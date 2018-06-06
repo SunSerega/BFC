@@ -73,7 +73,7 @@ type
     brro := true;
     
     
-    fmp: shortint ? := nil;//пешка которая только что походила на 2 клетки
+    fmp: shortint?;//пешка которая только что походила на 2 клетки
     
     
     white_move := true;//чей ход
@@ -243,7 +243,7 @@ implementation
 var
   StartTime := System.DateTime.Now;
   
-procedure WTF(name: string; params obj: array of object) := System.IO.File.AppendAllText(name, string.Join('', obj.ConvertAll(a -> _ObjectToString(a))) + char(13) + char(10));
+procedure WTF(name: string; params obj: array of object) := lock name do System.IO.File.AppendAllText(name, string.Join('', obj.ConvertAll(a -> _ObjectToString(a))) + char(13) + char(10));
 
 procedure SaveError(params obj: array of object);
 begin

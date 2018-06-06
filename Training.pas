@@ -30,7 +30,7 @@ begin
     current_dir := evolv_dir_name + '\' + ReadlnString;
     current_gen_id := 0;
     System.IO.Directory.CreateDirectory(current_dir);
-    Bot.Init;
+    Bot.Init(2);
     System.IO.Directory.CreateDirectory(current_dir + '\Gen ' + current_gen_id + '\Bots');
     Bot.bots.ForEach(procedure(b, i)-> b.Save(current_dir + '\Gen ' + current_gen_id + '\Bots\bot ' + i + '.bin'));
     exit;
@@ -43,7 +43,7 @@ end;
 procedure LoadEvolvRecord(name:string);
 begin
   current_dir := name;
-  current_gen_id := System.IO.Directory.EnumerateDirectories(current_dir).Count-1;
+  current_gen_id := StrToInt(System.IO.Directory.EnumerateDirectories(current_dir).Last.Split(' ').Last);
   Bot.InitFrom(name+'\Gen '+current_gen_id);
 end;
 
@@ -131,7 +131,7 @@ begin
     
     
     System.Console.SetCursorPosition(10, 0);
-    System.Console.Write($'{Bot.tgc/Bot.mtg*100}%');
+    System.Console.Write(string.Format('{0,6:N2}%',Bot.tgc/Bot.mtg*100));
     
     System.Console.SetCursorPosition(10, 1);
     System.Console.Write(current_dir.Split('\').Last);
