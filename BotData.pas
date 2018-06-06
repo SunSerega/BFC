@@ -9,10 +9,10 @@ type
   Bot = sealed class
     
     private const max_bots = 20*(1+1+3);//=100; 20 first possible moves * (best bot + mutated best bot + 3*child of 2 random bots)
-    //private const max_move_search_lvl = 3;
+    private const max_move_search_lvl = 3;
     
     //private const max_bots = 1;
-    private const max_move_search_lvl = 2;
+    //private const max_move_search_lvl = 2;
     
     public class bots := new List<Bot>(20*(1+1+3));
     
