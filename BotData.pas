@@ -20,6 +20,7 @@ type
     public class LastGEs:array of integer;
     public class mtg := 1;
     public class tgc := 0;
+    public class best_of_gen:=new List<Bot>;
     
     public class CoresUsed := 1;
     
@@ -281,6 +282,8 @@ type
       
       Tournament;
       
+      best_of_gen.Clear;
+      var bog_score := integer.MinValue;
       var nbots := new List<bot>(max_bots);
       
       foreach var kvp in bots.ToLookup(b->b.fmhc) do
@@ -290,13 +293,25 @@ type
           if b.last_score > max_score then
             max_score := b.last_score;
         var c := 0;
+        var at_bog:boolean;
+        if max_score > bog_score then
+        begin
+          best_of_gen.Clear;
+          at_bog := true;
+        end else
+        if max_score = bog_score then
+          at_bog := true;
         foreach var b:Bot in kvp do
           if b.last_score = max_score then
           begin
             c += 1;
-            nbots.Add(b);
-            nbots.Add(new Bot(b));
-            if c = 2 then break;
+            if c < 3 then
+            begin
+              nbots.Add(b);
+              nbots.Add(new Bot(b));
+            end;
+            if at_bog then
+              best_of_gen.Add(b);
           end;
       end;
       

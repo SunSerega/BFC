@@ -93,9 +93,13 @@ begin
       
       Bot.NextGen;
       
-      current_gen_id += 1;
       var current_gen_dir := current_dir + '\Gen ' + current_gen_id;
-      System.IO.Directory.CreateDirectory(current_gen_dir);
+      System.IO.Directory.CreateDirectory(current_gen_dir + '\Best Bots');
+      Bot.best_of_gen.ForEach(procedure(b, i)-> b.Save(current_gen_dir + '\Best Bots\bot ' + i + '.bin'));
+      
+      current_gen_id += 1;
+      
+      current_gen_dir := current_dir + '\Gen ' + current_gen_id;
       System.IO.Directory.CreateDirectory(current_gen_dir + '\Bots');
       
       Bot.bots.ForEach(procedure(b, i)-> b.Save(current_gen_dir + '\Bots\bot ' + i + '.bin'));
