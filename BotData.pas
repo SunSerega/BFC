@@ -277,6 +277,14 @@ type
       
     end;
     
+    public class procedure LoadFrom(dir:string);
+    begin
+      
+      foreach var bfn in System.IO.Directory.EnumerateFiles(dir+'\Best Bots') do
+        new Bot(bfn);
+      
+    end;
+    
     public class procedure NextGen;
     begin
       

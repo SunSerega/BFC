@@ -1,19 +1,5 @@
 ﻿uses BoardData, GData, BotData;
 
-//ATTENTION вернуть макс ботов к 100
-
-//ToDo сейчас делает пустую папку и вроде ещё перезаписывает то что было, если загружать сохранение
-//ToDo добавить версию нейронной сети, чтоб можно было потом другие виды добавить
-
-procedure DeleteWholeDir(dir_name: string);
-begin
-  foreach var ud in System.IO.Directory.EnumerateDirectories(dir_name) do
-    DeleteWholeDir(ud);
-  foreach var f in System.IO.Directory.EnumerateFiles(dir_name) do
-    System.IO.File.Delete(f);
-  System.IO.Directory.Delete(dir_name);
-end;
-
 const
   evolv_dir_name = 'Evolution Records';
 
@@ -43,7 +29,11 @@ end;
 procedure LoadEvolvRecord(name:string);
 begin
   current_dir := name;
-  current_gen_id := StrToInt(System.IO.Directory.EnumerateDirectories(current_dir).Last.Split(' ').Last);
+  current_gen_id := 
+    System.IO.Directory.EnumerateDirectories(current_dir)
+    .Select(s->StrToInt(s.Split(' ').Last))
+    .OrderByDescending(i->i)
+    .First;
   Bot.InitFrom(name+'\Gen '+current_gen_id);
 end;
 
@@ -88,7 +78,7 @@ begin
   LoadSettings;
   Init;
   
-  (new System.Threading.Thread(()->while true do 
+  (new System.Threading.Thread(()->while true do
     try
       
       Bot.NextGen;
@@ -108,15 +98,12 @@ begin
       on e: Exception do SaveError(e);
     end)).Start;
   
-  while Bot.CurrentBoards = nil do Sleep(10);
   GData.Init;
-  var w := Max(10,current_dir.Split('\').Last.Length);
+  while Bot.CurrentBoards = nil do Sleep(10);
   
+  var w := Max(10,current_dir.Split('\').Last.Length);
   System.Console.SetWindowSize(10+w, 9*Bot.CoresUsed+1);
   System.Console.SetBufferSize(10+w, 9*Bot.CoresUsed+1);
-  
-  System.Console.SetCursorPosition(10, 2);
-  System.Console.Write(current_dir.Split('\').Last);
   
   while true do
   begin
@@ -125,23 +112,9 @@ begin
     
     
     
-    System.Console.SetCursorPosition(10, 0);
-    System.Console.Write(' ' * w);
-    System.Console.SetCursorPosition(10, 1);
-    System.Console.Write(' ' * w);
-    System.Console.SetCursorPosition(10, 2);
-    System.Console.Write(' ' * w);
-    
-    
-    
-    System.Console.SetCursorPosition(10, 0);
-    System.Console.Write(string.Format('{0,6:N2}%',Bot.tgc/Bot.mtg*100));
-    
-    System.Console.SetCursorPosition(10, 1);
-    System.Console.Write(current_dir.Split('\').Last);
-    
-    System.Console.SetCursorPosition(10, 2);
-    System.Console.Write($'Gen #{current_gen_id}');
+    Display(w,0,string.Format('{0,6:N2}%',Bot.tgc/Bot.mtg*100));
+    Display(w,1,current_dir.Split('\').Last);
+    Display(w,2,'Gen #'+current_gen_id.ToString);
     
     
     
@@ -153,15 +126,10 @@ begin
     if Bot.LastGEs[i] = -2 then continue;
     
     System.Console.SetCursorPosition(10, i*9+8);
-    System.Console.Write(' ' * w);
-    
-    
-    
-    System.Console.SetCursorPosition(10, i*9+8);
     case Bot.LastGEs[i] of
-      -1: System.Console.Write('Black won');
-      +0: System.Console.Write('Draw');
-      +1: System.Console.Write('White won');
+      -1: Display(w,i*9+8,'Black won');
+      +0: Display(w,i*9+8,'Draw');
+      +1: Display(w,i*9+8,'White won');
     end;
     
     end;

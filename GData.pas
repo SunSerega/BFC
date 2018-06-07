@@ -13,15 +13,36 @@ const
   BackgroundColor2 = System.ConsoleColor.DarkGray;
   TempBGColor = System.ConsoleColor.DarkRed;
 
+var
+  cX := 0;
+  cY := 0;
+  
+  cmix := 0;
+  cmax := 7;
+  cmiy := 0;
+  cmay := 7;
+  
+  RCT:=new List<(integer, integer, byte)>;
+
+function GetKeyState(nVirtKey: byte): byte;
+
 procedure Init;
+
+procedure Display(w, row: integer; s: string);
 
 procedure DrawBoard(b: Board; dx, dy: integer);
 
 implementation
 
-var
-  cX := 0;
-  cY := 0;
+procedure Display(w, row: integer; s: string);
+begin
+  System.Console.BackgroundColor := BackgroundColor1;
+  System.Console.ForegroundColor := System.ConsoleColor.Black;
+  System.Console.SetCursorPosition(10, row);
+  
+  System.Console.Write(s);
+  System.Console.Write(' ' * (w - s.Length));
+end;
 
 function GetColorFromCTId(b: Board; CTId: (integer, integer, byte)): System.ConsoleColor;
 begin
@@ -31,7 +52,7 @@ begin
       Move.sm: Result := (b.cls[CTId[0], CTId[1]] = Empty) ? System.ConsoleColor.Green : System.ConsoleColor.Red;
       Move.ep: Result := System.ConsoleColor.Red;
       Move.crm: Result := System.ConsoleColor.Magenta;
-      Move.pm: Result := System.ConsoleColor.Yellow;
+      Move.pm: Result := System.ConsoleColor.Magenta;
     end;
 end;
 
@@ -39,20 +60,10 @@ procedure DrawBoard(b: Board; dx, dy: integer);
 begin
   var s := #9608 * 10;
   var ColoredTiles: List<(integer, integer, byte)>;
+  if RCT.Count <> 0 then
+    ColoredTiles := RCT else
   if (b.cls[cX, cY] <> Empty) and (b.white_move = b.IsWhite(cX, cY)) then
-  begin
-    var temp: Board;
-    var wcp: ()->boolean := ()->not temp.WKingUnderAttack;
-    var bcp: ()->boolean := ()->not temp.BKingUnderAttack;
-    var check_proc: ()->boolean := b.white_move ? wcp : bcp;
-    ColoredTiles := b.GetAllMoves(cX, cY).Where(m -> begin
-      
-      temp := b.Copy;
-      m.UseOn(temp, false);
-      Result := check_proc;
-      
-    end).SelectMany(m -> m.GetAllColoredTiles).ToList
-  end else
+    ColoredTiles := b.GetAllMoves(cX, cY).OnlyAllowed(b.Copy).SelectMany(m -> m.GetAllColoredTiles).ToList else
     ColoredTiles := new List<(integer, integer, byte)>;
   
   System.Console.SetCursorPosition(dx, dy);
@@ -60,7 +71,7 @@ begin
   System.Console.Write(s);
   for var y := 0 to 7 do
   begin
-    System.Console.SetCursorPosition(dx, dy+y + 1);
+    System.Console.SetCursorPosition(dx, dy + y + 1);
     System.Console.ForegroundColor := FrameColor;
     System.Console.Write(#9608);
     for var x := 0 to 7 do
@@ -88,7 +99,7 @@ begin
     System.Console.ForegroundColor := FrameColor;
     System.Console.Write(#9608);
   end;
-  System.Console.SetCursorPosition(dx, dy+9);
+  System.Console.SetCursorPosition(dx, dy + 9);
   System.Console.ForegroundColor := FrameColor;
   System.Console.Write(s);
 end;
@@ -96,51 +107,48 @@ end;
 function GetKeyState(nVirtKey: byte): byte;external 'User32.dll' name 'GetKeyState';
 
 var
-  last_tick_pressed := false;
+  last_tick_hpressed := false;
+  last_tick_vpressed := false;
 
 procedure CurrsorControl :=
 while true do
-  if last_tick_pressed then
+begin
+  if not last_tick_hpressed then
   begin
-    last_tick_pressed :=
-      (GetKeyState($25) shr 7 = 1) or
-      (GetKeyState($26) shr 7 = 1) or
-      (GetKeyState($27) shr 7 = 1) or
-      (GetKeyState($28) shr 7 = 1) or
-      
-      (GetKeyState($41) shr 7 = 1) or
-      (GetKeyState($57) shr 7 = 1) or
-      (GetKeyState($44) shr 7 = 1) or
-      (GetKeyState($53) shr 7 = 1);
-    
-    Sleep(1);
-  end else
-  begin
-    Log((cX, cY));
     
     if (GetKeyState($25) shr 7 = 1) or (GetKeyState($41) shr 7 = 1) then cX -= 1;
-    if (GetKeyState($26) shr 7 = 1) or (GetKeyState($57) shr 7 = 1) then cY -= 1;
     if (GetKeyState($27) shr 7 = 1) or (GetKeyState($44) shr 7 = 1) then cX += 1;
+    
+    if cX < cmix then cX := cmix;
+    if cX > cmax then cX := cmax;
+    
+  end;
+  if not last_tick_vpressed then
+  begin
+    
+    if (GetKeyState($26) shr 7 = 1) or (GetKeyState($57) shr 7 = 1) then cY -= 1;
     if (GetKeyState($28) shr 7 = 1) or (GetKeyState($53) shr 7 = 1) then cY += 1;
     
-    if cX < 0 then cX := 0;
-    if cY < 0 then cY := 0;
-    if cX > 7 then cX := 7;
-    if cY > 7 then cY := 7;
+    if cY < cmiy then cY := cmiy;
+    if cY > cmay then cY := cmay;
     
-    last_tick_pressed :=
-      (GetKeyState($25) shr 7 = 1) or
-      (GetKeyState($26) shr 7 = 1) or
-      (GetKeyState($27) shr 7 = 1) or
-      (GetKeyState($28) shr 7 = 1) or
-      
-      (GetKeyState($41) shr 7 = 1) or
-      (GetKeyState($57) shr 7 = 1) or
-      (GetKeyState($44) shr 7 = 1) or
-      (GetKeyState($53) shr 7 = 1);
-    
-    Sleep(1);
   end;
+  
+  last_tick_hpressed :=
+    (GetKeyState($25) shr 7 = 1) or
+    (GetKeyState($27) shr 7 = 1) or
+    
+    (GetKeyState($41) shr 7 = 1) or
+    (GetKeyState($44) shr 7 = 1);
+  last_tick_vpressed :=
+    (GetKeyState($26) shr 7 = 1) or
+    (GetKeyState($28) shr 7 = 1) or
+    
+    (GetKeyState($57) shr 7 = 1) or
+    (GetKeyState($53) shr 7 = 1);
+  
+  Sleep(5);
+end;
 
 procedure Init;
 begin

@@ -231,8 +231,10 @@ type
     procedure UseOn(b: Board; look_for_GE:boolean); abstract;
     procedure Save(bw: System.IO.BinaryWriter); abstract;
     function GetAllColoredTiles:sequence of (integer,integer,byte); abstract;
+    function IsEndPos(x,y:integer):boolean; abstract;
     
     function IsSameSM(m:Move):boolean;
+    function IsPromotion:boolean;
     
   end;
 
@@ -334,6 +336,8 @@ type
       );
     end;
     
+    function IsEndPos(x,y:integer):boolean; override := (x = toX) and (y=toY);
+    
     procedure Save(bw: System.IO.BinaryWriter); override := raise new System.Exception;
     
     constructor(fx, fy, tx, ty: shortint);
@@ -423,6 +427,10 @@ type
         white?wr_ct:br_ct
       );
     
+    function IsEndPos(x,y:integer):boolean; override := 
+    (left?(x=2):(x=6)) and
+    (white?(y=7):(y=0));
+    
     procedure Save(bw: System.IO.BinaryWriter); override := raise new System.Exception;
     
     constructor(white, left: boolean);
@@ -466,6 +474,8 @@ type
         (integer(toX),integer(fromY),ep)
       );
     end;
+    
+    function IsEndPos(x,y:integer):boolean; override := (x = toX) and (y=toY);
     
     procedure Save(bw: System.IO.BinaryWriter); override := raise new System.Exception;
     
@@ -511,6 +521,16 @@ type
       (integer(x),integer(y),pm)
     );
     
+    function IsEndPos(x,y:integer):boolean; override;
+    begin
+      case nft mod 6 of
+        WRook: Result := (x=2) and ((y=-1)or(y=8));
+        WKnight: Result := (x=3) and ((y=-1)or(y=8));
+        WBishop: Result := (x=4) and ((y=-1)or(y=8));
+        WQueen: Result := (x=5) and ((y=-1)or(y=8));
+      end;
+    end;
+    
     procedure Save(bw: System.IO.BinaryWriter); override := raise new System.Exception;
     
     constructor(fx, fy: shortint; fig: Piece);
@@ -523,6 +543,14 @@ type
   end;
 
 
+
+function OnlyAllowed(self:sequence of Move; b:Board):sequence of Move; extensionmethod :=
+  self.where(m->begin
+    
+    m.UseOn(b,false);
+    Result := not (b.white_move ? b.WKingUnderAttack : b.BKingUnderAttack);
+    
+  end);
 
 function Board.UnderAttackByPawn(x, y: shortint; by_white: boolean): boolean;
 begin
@@ -992,6 +1020,9 @@ begin
     (sm1.fromX=sm2.fromX) and (sm1.toX=sm2.toX) and
     (sm1.fromY=sm2.fromY) and (sm1.toY=sm2.toY);
 end;
+
+function Move.IsPromotion:boolean := self is Promotion;
+
 
 
 begin
